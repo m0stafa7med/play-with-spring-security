@@ -4,7 +4,7 @@ import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
-import com.nimbusds.jose.proc.JWKSecurityContext;
+import com.nimbusds.jose.proc.SecurityContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -12,7 +12,6 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -27,6 +26,11 @@ import org.springframework.security.oauth2.server.authorization.settings.Authori
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.LoginUrlAuthenticationEntryPoint;
+
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.interfaces.RSAPublicKey;
 import java.util.UUID;
 
 
@@ -54,21 +58,24 @@ public class SecurityConfig {
     @Bean
     @Order(2)
     public SecurityFilterChain appSecurityFilterChain(HttpSecurity http) throws Exception {
-        http.formLogin(formLogin-> formLogin.loginPage("/login")
-                        .defaultSuccessUrl("/home",true))
-                .authorizeHttpRequests(auth->auth.anyRequest().authenticated());
-
+        http.formLogin(Customizer.withDefaults())
+                .authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
         return http.build();
     }
 
     @Bean
     public UserDetailsService userDetailsService() {
-        var u1 = User.withUsername("user")
-                .password("password")
+        var u1 = User.withUsername("user1")
+                .password("user1")
                 .authorities("read")
                 .build();
 
-        return new InMemoryUserDetailsManager(u1);
+        var u2 = User.withUsername("user2")
+                .password("user2")
+                .authorities("write")
+                .build();
+
+        return new InMemoryUserDetailsManager(u1, u2);
     }
 
     @Bean
@@ -96,5 +103,24 @@ public class SecurityConfig {
     public AuthorizationServerSettings authorizationServerSettings() {
         return AuthorizationServerSettings.builder()
                 .build();
+    }
+
+
+    @Bean
+    public JWKSource<SecurityContext> jwkSource() throws Exception {
+        KeyPairGenerator kg = KeyPairGenerator.getInstance("RSA");
+        kg.initialize(2048);
+        KeyPair kp = kg.generateKeyPair();
+
+        RSAPublicKey publicKey = (RSAPublicKey) kp.getPublic();
+        RSAPrivateKey privateKey = (RSAPrivateKey) kp.getPrivate();
+
+        RSAKey key = new RSAKey.Builder(publicKey)
+                .privateKey(privateKey)
+                .keyID(UUID.randomUUID().toString())
+                .build();
+
+        JWKSet set = new JWKSet(key);
+        return new ImmutableJWKSet<>(set);
     }
 }

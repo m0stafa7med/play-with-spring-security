@@ -12,6 +12,7 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
@@ -65,17 +66,13 @@ public class SecurityConfig {
 
     @Bean
     public UserDetailsService userDetailsService() {
-        var u1 = User.withUsername("user1")
-                .password("user1")
+        var u1 = User.withUsername("user")
+                .password("password")
                 .authorities("read")
                 .build();
 
-        var u2 = User.withUsername("user2")
-                .password("user2")
-                .authorities("write")
-                .build();
 
-        return new InMemoryUserDetailsManager(u1, u2);
+        return new InMemoryUserDetailsManager(u1);
     }
 
     @Bean
@@ -94,6 +91,7 @@ public class SecurityConfig {
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_BASIC)
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
                 .authorizationGrantType(AuthorizationGrantType.REFRESH_TOKEN)
+                .authorizationGrantType(AuthorizationGrantType.CLIENT_CREDENTIALS)
                 .build();
 
         return new InMemoryRegisteredClientRepository(r1);
